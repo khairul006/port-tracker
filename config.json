@@ -1,0 +1,5 @@
+{
+    "authorized_ports": [22, 80, 443],
+    "scan_interval_seconds": 10,
+    "log_file": "security_audit.log"
+}
