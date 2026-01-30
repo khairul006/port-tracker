@@ -3,11 +3,9 @@ import time
 import sys
 import os
 
-# Add the current directory to path so we can import our modules
-sys.path.append(os.path.dirname(__file__))
-
-import scanner
-import notifier
+from src import scanner
+from src import notifier
+from src import logger
 
 def load_config():
     with open('config.json', 'r') as f:
@@ -15,7 +13,7 @@ def load_config():
 
 def start_watcher():
     config = load_config()
-    notifier.setup_logging(config['log_file'])
+    logger.setup_logger(config['log_directory']) # One-time setup
     
     # Establish baseline
     active_port_data = {p['port']: p for p in scanner.get_listening_ports()}

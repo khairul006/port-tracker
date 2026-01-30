@@ -1,11 +1,16 @@
 import logging
 
-def setup_logging(log_file):
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(levelname)s - %(message)s',
-        handlers=[logging.FileHandler(log_file), logging.StreamHandler()]
-    )
+logger = logging.getLogger("PortTracker")
+
+def notify(message, level="info"):
+    """
+    This is the single entry point for all notifications.
+    It currently logs, but later it can send Telegram/Email.
+    """
+    if level == "warning":
+        logger.warning(f"🚨 ALERT: {message}")
+    else:
+        logger.info(message)
 
 def alert_new_port(port_info, is_authorized):
     prefix = "[AUTHORIZED]" if is_authorized else "[!!! UNKNOWN !!!]"
@@ -15,3 +20,7 @@ def alert_new_port(port_info, is_authorized):
         logging.info(msg)
     else:
         logging.warning(msg)
+
+def send_telegram(message):
+    # Future integration point
+    pass
