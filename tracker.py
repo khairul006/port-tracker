@@ -1,67 +1,44 @@
 import psutil
-import datetime
+import time
 import os
-import pandas as pd
 
-def get_listening_ports():
-    """
-    Scans the local system for all listening network connections
-    and maps them to their respective processes.
-    """
+def get_currently_listening():
+    """Returns a set of active listening ports."""
     connections = psutil.net_connections(kind='inet')
-    results = []
+    # We use a set for easy comparison logic
+    return {conn.laddr.port for conn in connections if conn.status == 'LISTEN'}
 
-    for conn in connections:
-        # We only care about ports that are actively "LISTENING" for incoming traffic
-        if conn.status == 'LISTEN':
-            try:
-                # Attempt to get process details
-                process = psutil.Process(conn.pid)
-                proc_name = process.name()
-                status = "Authorized" # You can later add logic to flag 'Unauthorized'
-            except (psutil.NoSuchProcess, psutil.AccessDenied):
-                proc_name = "N/A (Access Denied)"
-                status = "Hidden/System"
-
-            results.append({
-                "Timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "IP_Address": conn.laddr.ip,
-                "Port": conn.laddr.port,
-                "PID": conn.pid,
-                "Process_Name": proc_name,
-                "Status": status
-            })
+def monitor():
+    print("--- Security Watcher Mode Active ---")
+    print("Capturing baseline... (Press Ctrl+C to stop)")
     
-    return results
-
-def save_log(data):
-    """Saves the scan results to a CSV file for security auditing."""
-    file_name = "port_audit_log.csv"
-    df = pd.DataFrame(data)
-    
-    # If the file doesn't exist, create it with headers. 
-    # If it does, append the new scan results.
-    if not os.path.isfile(file_name):
-        df.to_csv(file_name, index=False)
-    else:
-        df.to_csv(file_name, mode='a', header=False, index=False)
-    
-    print(f"\n[+] Audit complete. Results saved to {file_name}")
-
-if __name__ == "__main__":
-    print("--- Secure Port Tracker Active ---")
+    # Step 1: Establish the baseline
+    baseline_ports = get_currently_listening()
+    print(f"Initial Open Ports: {baseline_ports}")
     
     try:
-        active_ports = get_listening_ports()
-        
-        # Print a clean table to the console
-        if active_ports:
-            print(pd.DataFrame(active_ports)[["Port", "Process_Name", "IP_Address", "PID"]])
-            save_log(active_ports)
-        else:
-            print("No listening ports detected.")
+        while True:
+            time.sleep(10) # Wait 10 seconds between checks
+            current_ports = get_currently_listening()
             
-    except PermissionError:
-        print("ERROR: Please run PowerShell/VS Code as Administrator to see process details.")
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
+            # Step 2: Compare
+            new_ports = current_ports - baseline_ports
+            closed_ports = baseline_ports - current_ports
+            
+            # Step 3: Alert
+            if new_ports:
+                for port in new_ports:
+                    print(f"\n[!] ALERT: New port opened: {port}")
+                # Update baseline so we don't alert again for the same port
+                baseline_ports.update(new_ports)
+                
+            if closed_ports:
+                for port in closed_ports:
+                    print(f"\n[i] Info: Port closed: {port}")
+                baseline_ports.difference_update(closed_ports)
+                
+    except KeyboardInterrupt:
+        print("\nWatcher stopped by user.")
+
+if __name__ == "__main__":
+    monitor()
