@@ -22,6 +22,7 @@ def setup_logger(log_dir):
 
     # 4. Get the Logger and attach handlers
     logger = logging.getLogger("PortTracker")
+    logger.propagate = False
     logger.setLevel(logging.INFO)
     
     # Clean up any existing handlers to avoid double-logging

@@ -1,5 +1,10 @@
 {
     "authorized_ports": [22, 80, 443],
     "scan_interval_seconds": 10,
-    "log_directory": "storage/logs"
+    "log_directory": "storage/logs",
+    "telegram": {
+        "enabled": true,
+        "token": "8334130210:AAHzxQLbDe1pi5yxiFPgADHKqnG7AKzBaD8",
+        "chat_id": "681291314"
+    }
 }

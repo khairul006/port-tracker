@@ -7,6 +7,7 @@ from src import scanner
 from src import alerts
 from src import logger
 from src.auditor import NetworkAuditor
+from src.notifier import TelegramNotifier
 
 def load_config():
     with open('config.json', 'r') as f:
@@ -18,6 +19,14 @@ def start_watcher():
 
     # Initialize the class (the "Service")
     auditor_service = NetworkAuditor()
+
+    # Initialize Telegram Service
+    tg_config = config.get('telegram', {})
+    notifier = TelegramNotifier(
+        token=tg_config.get('token'),
+        chat_id=tg_config.get('chat_id'),
+        enabled=tg_config.get('enabled', False)
+    )
     
     # Establish baseline
     active_port_data = {p['port']: p for p in scanner.get_listening_ports()}
@@ -41,6 +50,10 @@ def start_watcher():
                 # We scan '127.0.0.1' for local, but in production, you might scan the Public IP
                 audit_report = auditor_service.scan_port('127.0.0.1', port)
                 alerts.notify(audit_report, "info")
+
+                # 3. Send Telegram Alert
+                alert_text = f"🚨 <b>New Port Detected!</b>\n\n{audit_report}"
+                notifier.send_message(alert_text)
 
             # Detect Closed
             closed_ports = logging_ports - current_ports

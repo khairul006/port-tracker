@@ -9,3 +9,6 @@ __pycache__/
 
 # logfiles
 storage/logs
+
+# env
+config.json
