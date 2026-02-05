@@ -1,6 +1,10 @@
 import json
 import time
 import logging
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from src import scanner
 from src import alerts
@@ -9,8 +13,23 @@ from src.notifier import TelegramNotifier
 from src.logger import setup_logger
 
 def load_config():
-    with open('config.json', 'r') as f:
-        return json.load(f)
+    try:
+        with open('config.json', 'r') as f:
+            config = json.load(f)
+    except FileNotFoundError:
+        # Fallback if config.json is missing
+        config = {}
+
+    # Use .get() to avoid KeyErrors if 'telegram' section is missing in JSON
+    tg_section = config.get('telegram', {})
+    
+    # Inject secrets directly into the dictionary
+    tg_section['token'] = os.getenv('TELEGRAM_TOKEN')
+    tg_section['chat_id'] = os.getenv('TELEGRAM_CHAT_ID')
+    
+    # Put it back in case it was missing
+    config['telegram'] = tg_section
+    return config
 
 def start_watcher():
     config = load_config()
@@ -25,8 +44,8 @@ def start_watcher():
     # Initialize Telegram Service
     tg_config = config.get('telegram', {})
     notifier = TelegramNotifier(
-        token=tg_config.get('token'),
-        chat_id=tg_config.get('chat_id'),
+        token=tg_config.get('token'), # Safe access
+        chat_id=tg_config.get('chat_id'), 
         enabled=tg_config.get('enabled', False)
     )
     
