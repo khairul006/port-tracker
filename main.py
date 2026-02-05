@@ -1,13 +1,12 @@
 import json
 import time
-import sys
-import os
+import logging
 
 from src import scanner
 from src import alerts
-from src import logger
 from src.auditor import NetworkAuditor
 from src.notifier import TelegramNotifier
+from src.logger import setup_logger
 
 def load_config():
     with open('config.json', 'r') as f:
@@ -15,7 +14,10 @@ def load_config():
 
 def start_watcher():
     config = load_config()
-    logger.setup_logger(config['log_directory']) # One-time setup
+    # This sets up the 'PortTracker' logger in Python's memory
+    setup_logger(config)
+    # Grab the instance of that logger to use here in main.py
+    logger = logging.getLogger("PortTracker")
 
     # Initialize the class (the "Service")
     auditor_service = NetworkAuditor()
@@ -32,7 +34,7 @@ def start_watcher():
     active_port_data = {p['port']: p for p in scanner.get_listening_ports()}
     logging_ports = set(active_port_data.keys())
     
-    alerts.logging.info(f"Watcher started. Monitoring ports. Whitelist: {config['authorized_ports']}")
+    logger.info(f"Watcher started. Monitoring ports. Whitelist: {config['authorized_ports']}")
 
     try:
         while True:
@@ -58,11 +60,11 @@ def start_watcher():
             # Detect Closed
             closed_ports = logging_ports - current_ports
             for port in closed_ports:
-                alerts.logging.info(f"Port {port} has been closed.")
+                logger.info(f"Port {port} has been closed.")
 
             logging_ports = current_ports
     except KeyboardInterrupt:
-        alerts.logging.info("Shutting down tracker.")
+        logger.info("Shutting down tracker.")
 
 if __name__ == "__main__":
     start_watcher()
