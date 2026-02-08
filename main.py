@@ -70,15 +70,26 @@ def start_watcher():
             for port in new_ports:
                 # 1. Standard Alert
                 is_auth = port in config['authorized_ports']
-                db.log_port_event(port, "Open", is_auth) # save to database
                 alerts.alert_new_port(current_data[port], is_auth)
+
                 # 2. Trigger External Audit (Nmap)
                 # We scan '127.0.0.1' for local, but in production, you might scan the Public IP
                 audit_report = auditor_service.scan_port('127.0.0.1', port)
+                # Save the full object to the Database
+                db.log_port_event(port, "Open", audit_data=audit_report, is_authorized=is_auth)
                 alerts.notify(audit_report, "info")
 
                 # 3. Send Telegram Alert
-                alert_text = f"🚨 <b>New Port Detected!</b>\n\n{audit_report}"
+                alert_text = (
+                    f"🚨 <b>New Port Detected!</b>\n"
+                    f"━━━━━━━━━━━━━━━\n"
+                    f"<b>Port:</b> {port}\n"
+                    f"<b>Service:</b> {audit_report.get('service')}\n"
+                    f"<b>Product:</b> {audit_report.get('product')} (v{audit_report.get('version')})\n"
+                    f"<b>Authorized:</b> {'✅ Yes' if is_auth else '❌ NO'}\n"
+                    f"━━━━━━━━━━━━━━━\n"
+                    f"<b>Nmap Banner:</b>\n<code>{audit_report.get('script')}</code>"
+                )
                 notifier.send_message(alert_text)
 
             # Detect Closed
