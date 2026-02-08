@@ -10,6 +10,7 @@ from src import scanner
 from src import alerts
 from src.auditor import NetworkAuditor
 from src.notifier import TelegramNotifier
+from src.database import PortDatabase
 from src.logger import setup_logger
 
 def load_config():
@@ -37,6 +38,9 @@ def start_watcher():
     setup_logger(config)
     # Grab the instance of that logger to use here in main.py
     logger = logging.getLogger("PortTracker")
+
+    # Initialize the database
+    db = PortDatabase() 
 
     # Initialize the class (the "Service")
     auditor_service = NetworkAuditor()
@@ -66,6 +70,7 @@ def start_watcher():
             for port in new_ports:
                 # 1. Standard Alert
                 is_auth = port in config['authorized_ports']
+                db.log_port_event(port, "Open", is_auth) # save to database
                 alerts.alert_new_port(current_data[port], is_auth)
                 # 2. Trigger External Audit (Nmap)
                 # We scan '127.0.0.1' for local, but in production, you might scan the Public IP
@@ -79,6 +84,7 @@ def start_watcher():
             # Detect Closed
             closed_ports = logging_ports - current_ports
             for port in closed_ports:
+                db.log_port_event(port, "Closed")
                 logger.info(f"Port {port} has been closed.")
 
             logging_ports = current_ports
